@@ -53,7 +53,7 @@ if rc > 0 then do
   rMsg = "Error: File Read"
   call ExitProgram rc rMsg
 end 
-*/
+
 
 /*check member for strings*/
 if puzzleStr.0 = 0 then do 
