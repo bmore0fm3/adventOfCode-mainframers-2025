@@ -1,0 +1,28 @@
+# macOS & Windows
+.DS_Store
+Thumbs.db
+
+# Build output (if you generate anything)
+build/
+dist/
+target/
+
+# Logs & temp files
+*.log
+*.tmp
+*.bak
+*.swp
+*~
+*.swo
+
+# Editor backup files
+*.orig
+*.backup
+
+# VS Code – ignore only user-specific settings
+.vscode/settings.json
+.vscode/extensions.json
+
+# Environment vars & lock files
+.env
+*.lock
