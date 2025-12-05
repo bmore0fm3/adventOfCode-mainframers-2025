@@ -5,7 +5,7 @@
  
     Goal:
         1. What is the secret code?
-        2.
+        2. Find the Super Secret Code
 */
 
 /*********************************************************************
@@ -16,6 +16,7 @@ Initialize vars & capture program name
 /*call msg('OFF')*/ 
 rc = 0
 secretCode = 0
+superSecretCode = 0
 parse source . . this_ .
 exposedVars = 'this_',
               'rc';
@@ -24,22 +25,22 @@ exposedVars = 'this_',
 
 arg puzzleDsn dialSize dialPos
 
-/*Capture program name with oorexx
+/*Capture program name with oorexx*/
 parse source system invocation fullProgramPath
 fullProgramPath = reverse(fullProgramPath)
 parse var fullProgramPath 'xer.' this_ '/' .
 this_ = reverse(this_)
-*/
 
-/*validate input dsn on mainframe*/
+
+/*validate input dsn on mainframe
 if sysdsn("'"puzzleDsn"'") <> 'OK' then do 
   rc = 8
   rMsg = "Error: Invalid puzzle dsn"
   call ExitProgram rc rMsg
-end 
+end */
 
 
-/*Read the file*/
+/*Read the file
 "alloc file(readit) da('"puzzleDsn"') shr reuse"
 if rc > 0 then do
   rc = 8
@@ -52,20 +53,19 @@ if rc > 0 then do
   rc = 8
   rMsg = "Error: File Read"
   call ExitProgram rc rMsg
-end 
+end  */
 
 
-/*check member for strings*/
+/*check member for strings
 if puzzleStr.0 = 0 then do 
   rc = 4
   rMsg = "warning: No strings in member"
   call ExitProgram rc rMsg
-end
+end */
 
 /* Read in data using oorexx for testing
 file = "puzzleinput.txt" 
 
-puzzleStr. = ""
 puzzleStr.0 = 0
 
 i = 0
@@ -78,7 +78,7 @@ puzzleStr.0 = i
 call lineout file 
 */
 
-/*Test stem data
+/*Test stem data 
 puzzleStr.0 = 10
 puzzleStr.1 = 'L68'
 puzzleStr.2 = 'L30'
@@ -92,24 +92,38 @@ puzzleStr.9 = 'R14'
 puzzleStr.10 = 'L82'
 */
 
+
 /* first dialPos passed in by user Aoc said 50*/
+
 temp = dialPos
-do i = 1 to puzzleStr.0 + 1 /*off by one error quick fix*/
-  dialPos.i = temp 
-  dialPos.i = strip(dialPos.i)
+do i = 1 to puzzleStr.0 + 1 /*off by one error quick fix*/ 
+  puzzleStr.i = strip(puzzleStr.i)
+  dialPos.i = strip(temp)
   say time() this_ "dialPos."i" is " dialPos.i 
+
+  /*calculate next rotation and store result*/
+  call CalcRotation dialPos.i puzzleStr.i dialSize
+  temp = result
 
   /*check to see if we landed on zero*/
   call updateCode dialPos.i secretCode
   secretCode = result
   say time() this_ "Secret code updated to " secretCode
 
-  /*calculate next rotation and store result*/
-  call CalcRotation dialPos.i dialSize puzzleStr.i 
-  temp = result
+  /*supersecret Code check*/
+  call CrossesZero dialPos.i puzzleStr.i
+  parse var result clicksOnZero '00'x .
+  say time() this_ "Number of clicks on zero:" clicksOnZero
+  superSecretCode = clicksOnZero + superSecretCode 
+ 
 end i 
 
+  
+Answer = superSecretCode + secretCode
+say time() this_ "Answer is" answer
 /*say time() this_ "Secret code is " secretCode */
+/*say time() this_ "Super secret code is " superSecretCode + secretCode*/
+
 rMsg = "Secret code is " secretCode
 call ExitProgram rc rMsg 
 
@@ -132,7 +146,8 @@ Goal: Calculate the dial position after rotation
 *********************************************************************/
 CalcRotation: procedure expose(exposedVars) 
 
-parse arg currentPos dialSize rotateBy 
+arg currentPos rotateBy dialSize
+
 
 parse var rotateBy rotationDirection+1 rotationDistance .
 
@@ -146,6 +161,7 @@ Create a large number to prevent going negative.
 subtract that from currentPosition. Then when using the modulo, 
 it should have a positie remainder equal to new position.
 **********************************************************************/
+  
   newPosition = (currentPos - rotationDistance + dialSize * rotationDistance)
   newPosition = (newPosition // dialSize) 
 end
@@ -176,3 +192,57 @@ if dialLocation == 0 then
   code = code + 1
 
 return code 
+
+/*********************************************************************
+Name: CrossesZero
+Goal: Calculate how many times the dial lands on zero during a roation
+*********************************************************************/
+CrossesZero: procedure expose(exposedVars)
+
+this_ = 'CrossesZero'
+
+arg currentPos rotateBy
+
+parse var rotateBy rotateDirection+1 rotationDistance .
+
+clicksOnZero = 0 
+
+if rotateDirection = 'L' then do 
+  say time() this_ "Left Rotation Distance: "rotationDistance
+
+  /*when zero passed in*/
+  if currentPos == 0 then 
+    currentPos = 100
+
+  do rotationDistance 
+    /*Capture the click on zero*/
+    if currentPos == 0 then do
+      clicksOnZero = clicksOnZero + 1
+      currentPos = 100
+      currentPos = currentPos - 1
+    end 
+    else 
+      currentPos = currentPos - 1
+  end 
+
+end 
+
+if rotateDirection == 'R' then do 
+  say time() this_ "Right Rotation Distance: "rotationDistance
+
+  do rotationDistance
+    if currentPos == 100 then do 
+      clicksOnZero = clicksOnZero + 1
+      currentPos = 0
+      currentPos = currentPos + 1
+    end 
+    else 
+      currentPos = currentPos + 1
+  end
+end 
+
+if currentPos == 100 then 
+  currentPos = 0
+
+
+return clicksOnZero||'00'x||currentPos
